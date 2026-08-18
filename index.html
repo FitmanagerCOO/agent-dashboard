@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitManager — Onboarding Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-primary: #0f1117;
+    --bg-secondary: #1a1d27;
+    --bg-card: #1e2130;
+    --bg-card-hover: #252840;
+    --text-primary: #e8eaed;
+    --text-secondary: #9aa0a6;
+    --text-muted: #5f6368;
+    --border: #2d3039;
+    --accent: #7c5cfc;
+    --accent-light: #9b7dff;
+    --green: #34d399;
+    --green-bg: rgba(52,211,153,0.12);
+    --yellow: #fbbf24;
+    --yellow-bg: rgba(251,191,36,0.12);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.12);
+    --orange: #f97316;
+    --orange-bg: rgba(249,115,22,0.12);
+    --cyan: #06b6d4;
+    --cyan-bg: rgba(6,182,212,0.12);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,0.12);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96,165,250,0.12);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .dashboard { max-width: 1600px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .header h1 { font-size: 24px; font-weight: 700; }
+  .header h1 span { color: var(--accent-light); }
+  .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--text-secondary); }
+  .header-right .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 4px; }
+
+  /* KPI Row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+  .kpi-card .kpi-val { font-size: 32px; font-weight: 800; line-height: 1.1; }
+  .kpi-card .kpi-label { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: var(--text-secondary); margin-top: 4px; }
+  .kpi-card .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Charts Row */
+  .charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .chart-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .chart-card h3 {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    color: var(--text-secondary); margin-bottom: 16px; text-transform: uppercase;
+  }
+  .chart-container { position: relative; height: 200px; }
+
+  /* Filter Bar */
+  .filter-bar {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .filter-bar input {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 14px; color: var(--text-primary);
+    font-size: 13px; width: 220px; outline: none;
+  }
+  .filter-bar input:focus { border-color: var(--accent); }
+  .filter-bar select {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; color: var(--text-primary);
+    font-size: 13px; outline: none; cursor: pointer;
+  }
+  .filter-bar select:focus { border-color: var(--accent); }
+  .view-toggle { display: flex; gap: 4px; margin-left: auto; }
+  .view-toggle button {
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 16px; color: var(--text-secondary);
+    font-size: 13px; cursor: pointer; transition: all 0.15s;
+  }
+  .view-toggle button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .result-count { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+
+  /* Cards Grid */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 16px;
+  }
+
+  /* Customer Card */
+  .customer-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .customer-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 16px 16px 8px;
+  }
+  .card-header h3 { font-size: 15px; font-weight: 700; flex: 1; margin-right: 8px; }
+  .card-badges { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase;
+  }
+  .badge-stage { background: var(--blue-bg); color: var(--blue); }
+  .badge-on-track { background: var(--green-bg); color: var(--green); }
+  .badge-at-risk { background: var(--orange-bg); color: var(--orange); }
+  .badge-stalled { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-overdue { background: var(--red-bg); color: var(--red); }
+  .badge-completed { background: var(--green-bg); color: var(--green); }
+  .badge-gym { background: var(--blue-bg); color: var(--blue); }
+  .badge-clinic { background: var(--purple-bg); color: var(--purple); }
+  .badge-supplement { background: var(--orange-bg); color: var(--orange); }
+  .badge-other { background: var(--cyan-bg); color: var(--cyan); }
+  .card-contact {
+    padding: 0 16px 8px; font-size: 12px; color: var(--text-secondary);
+  }
+  .card-contact a { color: var(--accent-light); text-decoration: none; }
+  .card-contact a:hover { text-decoration: underline; }
+
+  /* Progress */
+  .progress-section { padding: 0 16px 10px; }
+  .progress-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .progress-bar { height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+  .progress-fill.low { background: var(--red); }
+  .progress-fill.mid { background: var(--yellow); }
+  .progress-fill.high { background: var(--green); }
+
+  /* Phase Pipeline */
+  .phase-pipeline { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px 0; }
+  .phase-dot { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-primary); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: var(--text-muted); }
+  .phase-dot.completed { background: var(--green); border-color: var(--green); color: #fff; }
+  .phase-dot.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .phase-connector { width: 20px; height: 2px; background: var(--border); }
+  .phase-connector.completed { background: var(--green); }
+  .phase-labels { display: flex; justify-content: center; gap: 6px; padding: 4px 16px 8px; }
+  .phase-label { width: 28px; text-align: center; font-size: 9px; color: var(--text-muted); font-weight: 600; }
+  .phase-label.active-label { color: var(--accent-light); }
+
+  /* Card Stats */
+  .card-stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-top: 1px solid var(--border);
+  }
+  .card-stat {
+    background: var(--bg-secondary);
+    padding: 10px 8px;
+    text-align: center;
+  }
+  .card-stat .stat-val { font-size: 13px; font-weight: 700; }
+  .card-stat .stat-lbl { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Card Footer */
+  .card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; font-size: 11px; color: var(--text-muted);
+  }
+  .view-timeline { color: var(--accent-light); font-weight: 600; cursor: pointer; }
+  .view-timeline:hover { text-decoration: underline; }
+
+  /* Table View */
+  .table-view { display: none; }
+  .table-view.active { display: block; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table thead th {
+    text-align: left; padding: 10px 12px; font-size: 11px;
+    font-weight: 700; color: var(--text-secondary); letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border); cursor: pointer;
+    user-select: none; white-space: nowrap;
+  }
+  .data-table thead th:hover { color: var(--text-primary); }
+  .data-table tbody tr {
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.1s;
+  }
+  .data-table tbody tr:hover { background: var(--bg-card-hover); }
+  .data-table td { padding: 10px 12px; vertical-align: middle; }
+  .table-risk { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+  .table-risk.on-track { background: var(--green-bg); color: var(--green); }
+  .table-risk.at-risk { background: var(--orange-bg); color: var(--orange); }
+  .table-risk.stalled { background: var(--yellow-bg); color: var(--yellow); }
+  .table-risk.overdue { background: var(--red-bg); color: var(--red); }
+  .table-progress { display: inline-block; width: 60px; height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden; vertical-align: middle; margin-right: 6px; }
+
+  /* Timeline Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 1000;
+    justify-content: center; align-items: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 12px; width: 90%; max-width: 700px; max-height: 85vh;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+  }
+  .modal-header h2 { font-size: 18px; font-weight: 700; }
+  .modal-close {
+    background: none; border: none; color: var(--text-secondary);
+    font-size: 24px; cursor: pointer; padding: 4px 8px;
+  }
+  .modal-close:hover { color: var(--text-primary); }
+  .modal-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-summary .sum-item {
+    background: var(--bg-secondary);
+    padding: 14px 20px;
+  }
+  .modal-summary .sum-val { font-size: 20px; font-weight: 800; }
+  .modal-summary .sum-lbl { font-size: 11px; color: var(--text-muted); }
+  .modal-body { padding: 24px; overflow-y: auto; flex: 1; }
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .timeline-item { position: relative; margin-bottom: 20px; }
+  .timeline-dot {
+    position: absolute; left: -24px; top: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid var(--border); background: var(--bg-primary);
+  }
+  .timeline-dot.system { background: var(--green); border-color: var(--green); }
+  .timeline-dot.milestone { background: var(--yellow); border-color: var(--yellow); }
+  .timeline-dot.communication { background: var(--purple); border-color: var(--purple); }
+  .timeline-dot.blocker { background: var(--red); border-color: var(--red); }
+  .timeline-dot.training { background: var(--cyan); border-color: var(--cyan); }
+  .timeline-item .tl-title { font-size: 13px; font-weight: 600; }
+  .timeline-item .tl-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .timeline-item .tl-time { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .timeline-item .tl-actor { font-size: 11px; color: var(--accent-light); }
+
+  .hidden { display: none !important; }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(3, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .cards-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="dashboard">
+  <!-- Header -->
+  <div class="header">
+    <h1><span>FitManager</span> Onboarding Dashboard</h1>
+    <div class="header-right">
+      <span id="dataSource">🟡 LOADING</span>
+      <span id="dataTimestamp"></span>
+    </div>
+  </div>
+
+  <!-- KPI Row -->
+  <div class="kpi-row" id="kpiRow"></div>
+
+  <!-- Charts Row -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Risk Distribution</h3>
+      <div class="chart-container"><canvas id="riskChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Stage Pipeline</h3>
+      <div class="chart-container"><canvas id="pipelineChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Industry Mix</h3>
+      <div class="chart-container"><canvas id="industryChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <input type="text" id="searchInput" placeholder="Search customers..." oninput="renderCustomers()">
+    <select id="filterStage" onchange="renderCustomers()">
+      <option value="">All Stages</option>
+      <option value="Unassigned">Unassigned</option>
+      <option value="Kick Off Call">Kick Off Call</option>
+      <option value="Phase 1">Phase 1</option>
+      <option value="Phase 2">Phase 2</option>
+      <option value="Phase 3">Phase 3</option>
+    </select>
+    <select id="filterRisk" onchange="renderCustomers()">
+      <option value="">All Risk Levels</option>
+      <option value="On Track">On Track</option>
+      <option value="At Risk">At Risk</option>
+      <option value="Stalled">Stalled</option>
+      <option value="Overdue">Overdue</option>
+    </select>
+    <select id="filterIndustry" onchange="renderCustomers()">
+      <option value="">All Industries</option>
+      <option value="Gym">Gym / Fitness</option>
+      <option value="Clinic">Clinic / Wellness</option>
+      <option value="Supplement">Supplement Retail</option>
+    </select>
+    <select id="filterService" onchange="renderCustomers()">
+      <option value="">All Service Types</option>
+      <option value="V1">V1 Platform</option>
+      <option value="V2">V2 Platform</option>
+    </select>
+    <div class="view-toggle">
+      <button class="active" onclick="setView('cards',this)">Cards</button>
+      <button onclick="setView('table',this)">Table</button>
+    </div>
+    <span class="result-count" id="resultCount"></span>
+  </div>
+
+  <!-- Cards View -->
+  <div class="cards-grid" id="cardsGrid"></div>
+
+  <!-- Table View -->
+  <div class="table-view" id="tableView">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th onclick="sortTable('name')">Customer ↕</th>
+          <th onclick="sortTable('stage')">Stage ↕</th>
+          <th onclick="sortTable('risk')">Risk ↕</th>
+          <th onclick="sortTable('progress')">Progress ↕</th>
+          <th onclick="sortTable('days')">Days ↕</th>
+          <th onclick="sortTable('closedWon')">Closed Won ↕</th>
+          <th onclick="sortTable('goLive')">Go-Live ↕</th>
+          <th>Training</th>
+          <th>Owner</th>
+          <th>Timeline</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Timeline Modal -->
+<div class="modal-overlay" id="timelineModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Customer Timeline</h2>
+      <button class="modal-close" onclick="closeTimeline()">&times;</button>
+    </div>
+    <div class="modal-summary" id="modalSummary"></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ── Customer Data (from Zoho CRM) ──
+const PHASES = ['Unassigned','Kick Off Call','Phase 1','Phase 2','Phase 3','LIVE'];
+const PHASE_WEIGHT = { 'Unassigned': 0, 'Kick Off Call': 5, 'Phase 1': 20, 'Phase 2': 45, 'Phase 3': 65, 'LIVE': 100 };
+
+// ── Normalize live Zoho data to consistent display values ──
+function normalizeStage(stage) {
+  if (!stage) return 'Unassigned';
+  const s = stage.toLowerCase();
+  if (s === 'live') return 'LIVE';
+  if (s.includes('kick off')) return 'Kick Off Call';
+  if (s.includes('phase 1')) return 'Phase 1';
+  if (s.includes('phase 2')) return 'Phase 2';
+  if (s.includes('phase 3')) return 'Phase 3';
+  if (s.includes('additional training') || s.includes('at ')) return 'Phase 3';
+  if (s === 'unassigned') return 'Unassigned';
+  return stage;
+}
+function normalizeIndustry(ind) {
+  if (!ind) return 'Other';
+  const i = ind.toLowerCase();
+  if (i.includes('gym') || i.includes('fitness')) return 'Gym';
+  if (i.includes('clinic') || i.includes('medspa') || i.includes('aesthetic') ||
+      i.includes('health') || i.includes('wellness')) return 'Clinic';
+  if (i.includes('supplement') || i.includes('nutrition')) return 'Supplement';
+  return ind;
+}
+
+const MOCK_CUSTOMERS = [
+  { name:"Live Well Center", stage:"Kick Off Call", service:"V1", contact:"Cora Matteson", email:"cora@livewellcenter.com", goLive:"2026-09-11", training:"Enrolled", trainingProg:"Clinic Training", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-07-28T12:04:49-05:00" },
+  { name:"4110 Fitness", stage:"Phase 1", service:"V1", contact:"Daniel Ramirez", email:"daniel@4110fitness.com", goLive:"2026-09-06", training:"Enrolled", trainingProg:"Gym Training", industry:"Gym", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-07-23T18:32:29-05:00" },
+  { name:"Lotus Health", stage:"Phase 1", service:"V2", contact:"Monica Ladiski", email:"monica@lotushealth.com", goLive:"2026-09-05", training:"Enrolled", trainingProg:"Clinic Training", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-07-22T08:54:04-05:00" },
+  { name:"Emerald Coast Longevity", stage:"Phase 1", service:"V1", contact:"Tene and Stephen", email:"tene@emeraldcoast.com", goLive:"2026-08-01", training:"In Progress", trainingProg:"Clinic Training", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-07-21T13:09:56-05:00" },
+  { name:"Stax Nutrition", stage:"Kick Off Call", service:"V1", contact:"Josh Eck", email:"josh@staxnutrition.com", goLive:"2026-08-30", training:"Enrolled", trainingProg:"Million Dollar Retail Training", industry:"Supplement", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-07-16T15:12:37-05:00" },
+  { name:"Nutrishop HD", stage:"Phase 1", service:"V1", contact:"Jacob Solis", email:"jacob@nutrishophd.com", goLive:"2026-08-28", training:"Enrolled", trainingProg:"Million Dollar Retail Training", industry:"Supplement", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-07-14T17:09:08-05:00" },
+  { name:"Kalily Aesthetics", stage:"Phase 1", service:"V1", contact:"Katherine Grijalva", email:"katherine@kalilyaesthetics.com", goLive:"2026-08-14", training:"", trainingProg:"", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-06-30T12:15:35-05:00" },
+  { name:"Emily Weibel NP", stage:"Phase 2", service:"V1", contact:"Emily Weibel", email:"emily@emilyweibelnp.com", goLive:"2026-08-04", training:"In Progress", trainingProg:"Clinic Training", industry:"Clinic", wkStatus:"", ownerName:"Rob Carona", created:"2026-06-29T11:53:00-05:00" },
+  { name:"Peak Fitness", stage:"Phase 2", service:"V1", contact:"Amy Staggs", email:"amy@peakfitness.com", goLive:"2026-07-31", training:"", trainingProg:"", industry:"Gym", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-06-16T14:00:20-05:00" },
+  { name:"Pecos Valley Wellness", stage:"Phase 2", service:"V1", contact:"Stephen Muhr", email:"stephen@pecosvalley.com", goLive:"2026-07-27", training:"", trainingProg:"", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-06-12T14:56:02-05:00" },
+  { name:"Lions Optimal Health", stage:"Phase 2", service:"V1", contact:"Jason Schmidthuber", email:"jason@lionshealth.com", goLive:"2026-07-24", training:"", trainingProg:"", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-06-09T19:20:17-05:00" },
+  { name:"Vita Fitness", stage:"Phase 1", service:"V2", contact:"Terrence Hamilton", email:"terrence@vitafitness.com", goLive:"2026-07-22", training:"", trainingProg:"", industry:"Gym", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-06-07T15:15:52-05:00" },
+  { name:"Forza Strength And Swing", stage:"Phase 1", service:"V1", contact:"Ernie Biele", email:"ernie@forzastrength.com", goLive:"2026-07-03", training:"", trainingProg:"", industry:"Gym", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-05-19T18:57:30-05:00" },
+  { name:"Nutrishop St. Augustine", stage:"Phase 1", service:"V1", contact:"Scott Crandall", email:"scott@nutrishopsa.com", goLive:"2026-06-29", training:"", trainingProg:"", industry:"Supplement", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-05-15T09:28:03-05:00" },
+  { name:"Bodies By Bristol", stage:"Phase 3", service:"V1", contact:"Bristol Jenkins", email:"bristol@bodiesbybristol.com", goLive:"2026-06-26", training:"", trainingProg:"", industry:"Gym", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-05-12T15:54:49-05:00" },
+  { name:"Straight 2 U Wellness", stage:"Phase 2", service:"V1", contact:"Mary Nye", email:"mary@straight2u.com", goLive:"2026-06-26", training:"", trainingProg:"", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-05-12T16:19:26-05:00" },
+  { name:"Poppywell Nursing Corp", stage:"Phase 2", service:"V1", contact:"Jeannette Macaraig", email:"jeannette@poppywell.com", goLive:"", training:"Not Enrolled", trainingProg:"Clinic Training", industry:"Clinic", wkStatus:"", ownerName:"Rob Carona", created:"2026-04-13T19:10:03-05:00" },
+  { name:"Morning Fitness", stage:"Phase 3", service:"V1", contact:"", email:"", goLive:"2026-05-30", training:"", trainingProg:"", industry:"Gym", wkStatus:"", ownerName:"Rob Carona", created:"2026-04-15T12:36:15-05:00" },
+  { name:"Forge Human Performance", stage:"Phase 3", service:"V1", contact:"David & Mike", email:"david@forgehp.com", goLive:"2026-05-16", training:"In Progress", trainingProg:"", industry:"Gym", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-04-01T14:23:06-05:00" },
+  { name:"Freedom Performance", stage:"Phase 3", service:"V1", contact:"Brady Mengarelli", email:"brady@freedomperf.com", goLive:"2026-05-08", training:"", trainingProg:"", industry:"Gym", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-03-24T15:17:28-05:00" },
+  { name:"Lean Dose", stage:"Phase 2", service:"V1", contact:"Adrian Elizalde", email:"adrian@leandose.com", goLive:"2026-05-25", training:"", trainingProg:"", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-03-13T15:22:01-05:00" },
+  { name:"Comfort Health", stage:"Phase 2", service:"V1", contact:"Tsion Gebresellasie", email:"tsion@comforthealth.com", goLive:"2026-04-13", training:"", trainingProg:"", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-02-27T11:04:48-06:00" },
+  { name:"ISI Elite Training - Lexington", stage:"Phase 2", service:"V1", contact:"John Scarborough", email:"john@isielite.com", goLive:"2026-04-10", training:"", trainingProg:"", industry:"Gym", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-02-24T13:52:41-06:00" },
+  { name:"Desert Rose Medspa", stage:"Phase 2", service:"V1", contact:"Marty", email:"marty@desertrose.com", goLive:"2026-05-05", training:"", trainingProg:"", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-02-19T14:48:35-06:00" },
+  { name:"Nutrishop Boca", stage:"Phase 2", service:"V1", contact:"", email:"", goLive:"", training:"", trainingProg:"", industry:"Supplement", wkStatus:"", ownerName:"Rob Carona", created:"2026-02-09T08:38:41-06:00" },
+  { name:"Richeson Wellness", stage:"Phase 2", service:"V1", contact:"", email:"", goLive:"", training:"", trainingProg:"", industry:"Clinic", wkStatus:"", ownerName:"Rob Carona", created:"2026-02-09T08:37:46-06:00" },
+  { name:"Remedy Wellness", stage:"Phase 2", service:"V1", contact:"", email:"", goLive:"", training:"", trainingProg:"", industry:"Clinic", wkStatus:"", ownerName:"Rob Carona", created:"2026-02-09T08:31:40-06:00" },
+  { name:"Nutrishop Gardendale", stage:"Phase 2", service:"V1", contact:"", email:"", goLive:"", training:"", trainingProg:"", industry:"Supplement", wkStatus:"", ownerName:"Rob Carona", created:"2026-02-09T08:30:52-06:00" },
+  { name:"Younique Medical Spa", stage:"Phase 2", service:"V1", contact:"", email:"", goLive:"", training:"", trainingProg:"", industry:"Clinic", wkStatus:"", ownerName:"Rob Carona", created:"2026-02-09T08:28:09-06:00" },
+  { name:"TX Care", stage:"Phase 3", service:"V1", contact:"Kobie Benham", email:"kobie@txcare.com", goLive:"2026-05-11", training:"", trainingProg:"", industry:"Clinic", wkStatus:"Pending Approval", ownerName:"Rob Carona", created:"2026-03-27T16:43:26-05:00" },
+];
+
+let customers = [];
+let isLoading = false;
+let loadError = null;
+
+// ── Fetch live data from API ──
+async function loadCustomers() {
+  isLoading = true;
+  loadError = null;
+  try {
+    const resp = await fetch('/api/customers');
+    const json = await resp.json();
+    if (json.success && json.data.length > 0) {
+      customers = json.data;
+      console.log(`[Dashboard] Loaded ${customers.length} live customers from Zoho CRM`);
+      const ds = document.getElementById('dataSource');
+      const dt = document.getElementById('dataTimestamp');
+      if (ds) { ds.textContent = '🟢 LIVE'; ds.style.color = 'var(--green)'; }
+      if (dt) { dt.textContent = new Date(json.timestamp).toLocaleTimeString(); }
+    } else {
+      console.warn('[Dashboard] API returned no data, using mock data');
+      customers = MOCK_CUSTOMERS;
+      loadError = 'Using sample data — API returned empty';
+      const ds = document.getElementById('dataSource');
+      if (ds) { ds.textContent = '🟡 MOCK'; ds.style.color = 'var(--yellow)'; }
+    }
+  } catch (e) {
+    console.warn('[Dashboard] API unavailable, using mock data:', e.message);
+    customers = MOCK_CUSTOMERS;
+    loadError = 'Using sample data — API unavailable';
+    const ds = document.getElementById('dataSource');
+    if (ds) { ds.textContent = '🔴 OFFLINE'; ds.style.color = 'var(--red)'; }
+  }
+  isLoading = false;
+
+  // Normalize and enrich
+  customers = customers.map(c => {
+    const stage = normalizeStage(c.stage || c.Onboarding_Stage || '');
+    const industry = normalizeIndustry(c.industry || c.Industry || '');
+    const created = c.created || c.Created_Time || '';
+    const goLive = c.goLive || c.Target_Go_Live_Date || '';
+    const closedWonDate = c.closedWonDate || c.Closed_Won_Date || '';
+    const daysActive = created ? Math.floor((Date.now() - new Date(created).getTime()) / 86400000) : 0;
+    const progress = PHASE_WEIGHT[stage] || 0;
+    const risk = calculateRisk({ stage, goLive, daysActive, lastActivity: c.lastActivity || c.Last_Activity_Time || '' });
+    return {
+      ...c,
+      stage, industry, created, goLive, closedWonDate, daysActive, progress, risk,
+      ownerName: c.ownerName || c.Owner_Name || c.owner_name || '',
+      training: c.training || c.Training_Status || '',
+      trainingProg: c.trainingProg || c.Training_Program || '',
+      contact: c.contact || c.Primary_Contact_Name || '',
+      email: c.email || c.Primary_Contact_Email || '',
+      lastActivity: c.lastActivity || c.Last_Activity_Time || '',
+    };
+  });
+
+  renderKPIs();
+  renderCharts();
+  renderCustomers();
+}
+
+function calculateRisk(c) {
+  if (c.stage === 'LIVE') return 'Completed';
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (c.goLive && new Date(c.goLive) < today) return 'Overdue';
+  const lastAct = c.lastActivity ? new Date(c.lastActivity) : null;
+  const daysSinceActivity = lastAct ? Math.floor((Date.now() - lastAct.getTime()) / 86400000) : 999;
+  if (c.daysActive > 30 && daysSinceActivity > 14) return 'Stalled';
+  if (c.daysActive > 21 && daysSinceActivity > 7) return 'At Risk';
+  return 'On Track';
+}
+
+function getFilteredCustomers() {
+  const search = (document.getElementById('searchInput').value || '').toLowerCase();
+  const stage = document.getElementById('filterStage').value;
+  const risk = document.getElementById('filterRisk').value;
+  const industry = document.getElementById('filterIndustry').value;
+  const service = document.getElementById('filterService').value;
+  return customers.filter(c => {
+    if (search && !(c.name||'').toLowerCase().includes(search) && !(c.contact||'').toLowerCase().includes(search) && !(c.email||'').toLowerCase().includes(search)) return false;
+    if (stage && c.stage !== stage) return false;
+    if (risk && c.risk !== risk) return false;
+    if (industry && c.industry !== industry) return false;
+    if (service && c.service !== service) return false;
+    return true;
+  });
+}
+
+// ── Render KPIs ──
+function renderKPIs() {
+  const total = customers.length;
+  const onTrack = customers.filter(c => c.risk === 'On Track').length;
+  const atRisk = customers.filter(c => c.risk === 'At Risk').length;
+  const stalled = customers.filter(c => c.risk === 'Stalled').length;
+  const overdue = customers.filter(c => c.risk === 'Overdue').length;
+  const needsAttention = atRisk + stalled;
+  const avgDays = total ? Math.round(customers.reduce((s,c) => s + c.daysActive, 0) / total) : 0;
+  const avgProgress = total ? Math.round(customers.reduce((s,c) => s + c.progress, 0) / total) : 0;
+
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-light)">${total}</div><div class="kpi-label">ACTIVE ONBOARDING</div><div class="kpi-sub">Currently in pipeline</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--green)">${onTrack}</div><div class="kpi-label">ON TRACK</div><div class="kpi-sub">${total ? Math.round(onTrack/total*100) : 0}% of pipeline</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--orange)">${needsAttention}</div><div class="kpi-label">NEEDS ATTENTION</div><div class="kpi-sub">${atRisk} at risk · ${stalled} stalled</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--red)">${overdue}</div><div class="kpi-label">OVERDUE</div><div class="kpi-sub">Past target go-live</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--blue)">${avgDays}d</div><div class="kpi-label">AVG DAYS ACTIVE</div><div class="kpi-sub">Across all customers</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:var(--accent-light)">${avgProgress}%</div><div class="kpi-label">AVG PROGRESS</div><div class="kpi-sub">Pipeline completion</div></div>
+  `;
+}
+
+// ── Render Charts ──
+let riskChart, pipelineChart, industryChart;
+function renderCharts() {
+  // Risk Distribution
+  const riskCounts = { 'On Track': 0, 'At Risk': 0, 'Stalled': 0, 'Overdue': 0 };
+  customers.forEach(c => { if (riskCounts[c.risk] !== undefined) riskCounts[c.risk]++; });
+  if (riskChart) riskChart.destroy();
+  riskChart = new Chart(document.getElementById('riskChart'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(riskCounts),
+      datasets: [{ data: Object.values(riskCounts), backgroundColor: ['#34d399','#f97316','#fbbf24','#ef4444'], borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9aa0a6', font: { size: 11 }, padding: 12 } } }, cutout: '65%' }
+  });
+
+  // Stage Pipeline
+  const displayPhases = PHASES.filter(p => p !== 'LIVE');
+  const stageCounts = displayPhases.map(p => customers.filter(c => c.stage === p).length);
+  if (pipelineChart) pipelineChart.destroy();
+  pipelineChart = new Chart(document.getElementById('pipelineChart'), {
+    type: 'bar',
+    data: {
+      labels: displayPhases,
+      datasets: [{ data: stageCounts, backgroundColor: '#60a5fa', borderRadius: 4, barThickness: 20 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: '#2d3039' }, ticks: { color: '#9aa0a6' } }, y: { grid: { display: false }, ticks: { color: '#9aa0a6', font: { size: 11 } } } } }
+  });
+
+  // Industry Mix
+  const indCounts = {};
+  customers.forEach(c => { indCounts[c.industry] = (indCounts[c.industry]||0) + 1; });
+  const indLabels = Object.keys(indCounts);
+  const indColors = indLabels.map(l => l === 'Clinic' ? '#a78bfa' : l === 'Gym' ? '#60a5fa' : l === 'Supplement' ? '#f97316' : '#ef4444');
+  if (industryChart) industryChart.destroy();
+  industryChart = new Chart(document.getElementById('industryChart'), {
+    type: 'doughnut',
+    data: {
+      labels: indLabels,
+      datasets: [{ data: Object.values(indCounts), backgroundColor: indColors, borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#9aa0a6', font: { size: 11 }, padding: 12 } } }, cutout: '65%' }
+  });
+}
+
+// ── Badge Helpers ──
+function riskBadgeClass(risk) {
+  if (risk === 'On Track') return 'badge-on-track';
+  if (risk === 'At Risk') return 'badge-at-risk';
+  if (risk === 'Stalled') return 'badge-stalled';
+  if (risk === 'Overdue') return 'badge-overdue';
+  if (risk === 'Completed') return 'badge-completed';
+  return '';
+}
+function riskTableClass(risk) {
+  return risk.toLowerCase().replace(/\s+/g,'-');
+}
+function industryBadge(ind) {
+  if (!ind) return '';
+  const cls = ind === 'Gym' ? 'badge-gym' : ind === 'Clinic' ? 'badge-clinic' : ind === 'Supplement' ? 'badge-supplement' : 'badge-other';
+  return `<span class="badge ${cls}">${ind.toUpperCase()}</span>`;
+}
+function progressColor(pct) {
+  if (pct >= 60) return 'high';
+  if (pct >= 30) return 'mid';
+  return 'low';
+}
+function fmtDate(d) {
+  if (!d) return '';
+  try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+  catch { return d; }
+}
+
+// ── Render Customers ──
+function renderCustomers() {
+  const filtered = getFilteredCustomers();
+  document.getElementById('resultCount').textContent = `${filtered.length} of ${customers.length} customers`;
+
+  // Cards
+  document.getElementById('cardsGrid').innerHTML = filtered.map(c => {
+    const displayPhases = PHASES.filter(p => p !== 'LIVE' && p !== 'Unassigned');
+    const phaseHtml = displayPhases.map((p, i) => {
+      const pIdx = PHASES.indexOf(c.stage);
+      const dIdx = PHASES.indexOf(p);
+      let cls = '';
+      if (pIdx > dIdx) cls = 'completed';
+      else if (pIdx === dIdx) cls = 'active';
+      return `<div class="phase-dot ${cls}"></div>`;
+    }).join('');
+    const labelHtml = displayPhases.map((p, i) => {
+      const pIdx = PHASES.indexOf(c.stage);
+      const dIdx = PHASES.indexOf(p);
+      const short = ['KO','P1','P2','P3'][i];
+      return `<div class="phase-label ${pIdx === dIdx ? 'active-label' : ''}">${short}</div>`;
+    }).join('');
+
+    return `
+    <div class="customer-card" onclick="openTimeline('${c.name.replace(/'/g,"\\'")}')">
+      <div class="card-header">
+        <h3>${c.name}</h3>
+        <div class="card-badges">
+          <span class="badge badge-stage">${c.stage}</span>
+          <span class="badge ${riskBadgeClass(c.risk)}">${c.risk}</span>
+          ${industryBadge(c.industry)}
+        </div>
+      </div>
+      ${c.contact ? `<div class="card-contact">👤 ${c.contact}${c.email ? ` · <a href="mailto:${c.email}">${c.email}</a>` : ''}</div>` : '<div class="card-contact" style="color:var(--text-muted)">No contact assigned</div>'}
+      <div class="progress-section">
+        <div class="progress-header"><span>Progress</span><span>${c.progress}%</span></div>
+        <div class="progress-bar"><div class="progress-fill ${progressColor(c.progress)}" style="width:${c.progress}%"></div></div>
+      </div>
+      <div class="phase-pipeline">${phaseHtml}</div>
+      <div class="phase-labels">${labelHtml}</div>
+      <div class="card-stats">
+        <div class="card-stat"><div class="stat-val">${c.daysActive}</div><div class="stat-lbl">Days Active</div></div>
+        <div class="card-stat"><div class="stat-val">${fmtDate(c.closedWonDate) || '—'}</div><div class="stat-lbl">Closed Won</div></div>
+        <div class="card-stat"><div class="stat-val">${fmtDate(c.goLive)}</div><div class="stat-lbl">Target Go-Live</div></div>
+        <div class="card-stat"><div class="stat-val">${c.training || '—'}</div><div class="stat-lbl">Training</div></div>
+        <div class="card-stat"><div class="stat-val">${c.ownerName || '—'}</div><div class="stat-lbl">Owner</div></div>
+      </div>
+      <div class="card-footer">
+        <span>Last activity: ${fmtDate(c.lastActivity)}</span>
+        <span class="view-timeline">View Timeline →</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Table
+  document.getElementById('tableBody').innerHTML = filtered.map(c => `
+    <tr onclick="openTimeline('${c.name.replace(/'/g,"\\'")}')">
+      <td><strong>${c.name}</strong><br><span style="font-size:11px;color:var(--text-muted)">${c.contact || '—'}</span></td>
+      <td><span class="badge badge-stage">${c.stage}</span></td>
+      <td><span class="table-risk ${riskTableClass(c.risk)}">${c.risk}</span></td>
+      <td>
+        <span class="table-progress"><span class="table-progress-fill ${progressColor(c.progress)}" style="width:${c.progress}%;display:block;height:100%;border-radius:3px;background:${c.progress>=60?'var(--green)':c.progress>=30?'var(--yellow)':'var(--red)'}"></span></span>
+        ${c.progress}%
+      </td>
+      <td>${c.daysActive}d</td>
+      <td>${fmtDate(c.closedWonDate) || '—'}</td>
+      <td>${fmtDate(c.goLive)}</td>
+      <td>${c.training || '—'}</td>
+      <td>${c.ownerName || '—'}</td>
+      <td style="color:var(--accent-light);cursor:pointer">View →</td>
+    </tr>
+  `).join('');
+}
+
+// ── View Toggle ──
+function setView(view, btn) {
+  document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('cardsGrid').classList.toggle('hidden', view !== 'cards');
+  document.getElementById('tableView').classList.toggle('active', view === 'table');
+}
+
+// ── Table Sort ──
+let sortField = 'risk';
+let sortDir = 1;
+function sortTable(field) {
+  if (sortField === field) sortDir *= -1;
+  else { sortField = field; sortDir = 1; }
+  const riskOrder = { 'Overdue': 0, 'Stalled': 1, 'At Risk': 2, 'On Track': 3, 'Completed': 4 };
+  customers.sort((a, b) => {
+    let va, vb;
+    switch(field) {
+      case 'name': va = a.name; vb = b.name; return sortDir * va.localeCompare(vb);
+      case 'stage': va = PHASES.indexOf(a.stage); vb = PHASES.indexOf(b.stage); break;
+      case 'risk': va = riskOrder[a.risk]??5; vb = riskOrder[b.risk]??5; break;
+      case 'progress': va = a.progress; vb = b.progress; break;
+      case 'days': va = a.daysActive; vb = b.daysActive; break;
+      case 'goLive': va = a.goLive||'z'; vb = b.goLive||'z'; return sortDir * va.localeCompare(vb);
+      case 'closedWon': va = a.closedWonDate||'z'; vb = b.closedWonDate||'z'; return sortDir * va.localeCompare(vb);
+      default: return 0;
+    }
+    return sortDir * (va - vb);
+  });
+  renderCustomers();
+}
+
+// ── Timeline Modal ──
+function openTimeline(name) {
+  const c = customers.find(c => c.name === name);
+  if (!c) return;
+  document.getElementById('modalTitle').textContent = c.name;
+  document.getElementById('modalSummary').innerHTML = `
+    <div class="sum-item"><div class="sum-val" style="color:var(--blue)">${c.daysActive}d</div><div class="sum-lbl">Days Active</div></div>
+    <div class="sum-item"><div class="sum-val" style="color:var(--accent-light)">${c.progress}%</div><div class="sum-lbl">Complete</div></div>
+    <div class="sum-item"><div class="sum-val" style="color:var(--green)">${c.stage}</div><div class="sum-lbl">Current Phase</div></div>
+    <div class="sum-item"><div class="sum-val" style="color:var(--yellow)">${fmtDate(c.goLive) || '—'}</div><div class="sum-lbl">Target Go-Live</div></div>
+  `;
+
+  const events = [];
+  if (c.created) events.push({ type: 'milestone', title: 'Entered Onboarding', desc: `${c.name} added to the onboarding pipeline`, time: c.created, actor: '' });
+  if (c.wkSentAt) events.push({ type: 'system', title: 'Welcome Kit Sent', desc: `Welcome kit status: ${c.wkStatus||'Sent'}`, time: c.wkSentAt, actor: '' });
+  if (c.training === 'Enrolled') events.push({ type: 'training', title: 'Training Enrolled', desc: `Enrolled in ${c.trainingProg||'training program'}`, time: c.created, actor: '' });
+  if (c.training === 'In Progress') events.push({ type: 'training', title: 'Training In Progress', desc: `Currently progressing through ${c.trainingProg||'training'}`, time: c.lastActivity, actor: '' });
+  if (c.lastActivity) events.push({ type: 'communication', title: 'Last Activity', desc: 'Most recent interaction recorded', time: c.lastActivity, actor: '' });
+  if (c.timelineEvents) {
+    c.timelineEvents.forEach(ev => {
+      events.push({ type: ev.type === 'Milestone' ? 'milestone' : ev.type === 'Blocker' ? 'blocker' : 'system', title: ev.type, desc: ev.description, time: ev.timestamp, actor: ev.actor });
+    });
+  }
+
+  events.sort((a,b) => new Date(b.time||0) - new Date(a.time||0));
+  document.getElementById('modalBody').innerHTML = events.length
+    ? `<div class="timeline">${events.map(ev => `
+        <div class="timeline-item">
+          <div class="timeline-dot ${ev.type}"></div>
+          <div class="tl-title">${ev.title}</div>
+          ${ev.desc ? `<div class="tl-desc">${ev.desc}</div>` : ''}
+          <div class="tl-time">${fmtDate(ev.time)}</div>
+          ${ev.actor ? `<div class="tl-actor">by ${ev.actor}</div>` : ''}
+        </div>`).join('')}</div>`
+    : '<p style="color:var(--text-muted);text-align:center;padding:40px">No timeline events recorded yet.</p>';
+
+  document.getElementById('timelineModal').classList.add('active');
+}
+function closeTimeline() {
+  document.getElementById('timelineModal').classList.remove('active');
+}
+document.getElementById('timelineModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeTimeline();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeTimeline();
+});
+
+// ── Init ──
+loadCustomers();
+setInterval(loadCustomers, 120000); // Refresh every 2 min
+</script>
+</body>
+</html>
