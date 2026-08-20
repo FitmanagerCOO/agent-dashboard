@@ -101,6 +101,11 @@
   .agent-invoices .agent-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
   .agent-tax .agent-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
   .agent-shipping .agent-icon { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+
+  .agent-links { display: flex; gap: 8px; padding: 0 20px 12px; flex-wrap: wrap; }
+  .zoho-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; transition: all 0.15s; }
+  .zoho-link-crm { background: rgba(234,88,12,0.12); color: #fb923c; border: 1px solid rgba(234,88,12,0.25); }
+  .zoho-link-crm:hover { background: rgba(234,88,12,0.22); border-color: rgba(234,88,12,0.4); }
 </style>
 </head>
 <body>
@@ -152,6 +157,10 @@ const AGENTS = [
     desc: 'Onboarding & Welcome Kits',
     channel: '#onboarding',
     cssClass: 'agent-onboarding',
+    links: [
+      { label: '📋 Onboarding Module', url: 'https://crm.zoho.com/crm/fitmanager/tab/Onboarding_Module', css: 'zoho-link-crm' },
+      { label: '🏢 Accounts', url: 'https://crm.zoho.com/crm/fitmanager/tab/Accounts', css: 'zoho-link-crm' },
+    ],
     jobs: [
       { id: 'f4bf96719320', name: 'New Closed Won Monitor', icon: '🔔', schedule: 'Hourly (M-F 8-8 PM)', cron: '0 8-20 * * 1-5', script: 'onboarding-monitor.py', tools: [], deliver: 'Local', desc: 'Watches for new Closed Won deals in Zoho CRM, creates onboarding records, posts announcements to #onboarding channel.', noAgent: true },
       { id: 'edac224876a8', name: 'Welcome Kit (Morning)', icon: '📦', schedule: 'Daily 7:20 AM CT (M-F)', cron: '20 13 * * 1-5', skill: 'welcome-kit-automation', tools: [], deliver: 'Origin', desc: 'Qualifies Closed Won deals, creates welcome kit assets from HTML templates via Chrome CDP, posts to Slack for approval, sends test → customer emails.' },
@@ -253,6 +262,8 @@ function renderAgents() {
         </div>`;
     }).join('');
 
+    const linksHtml = agent.links ? `<div class="agent-links">${agent.links.map(l => `<a href="${l.url}" target="_blank" class="zoho-link ${l.css}">${l.label}</a>`).join('')}</div>` : '';
+
     card.innerHTML = `
       <div class="agent-header" onclick="toggleCard(this)">
         <div class="agent-icon">${agent.icon}</div>
@@ -263,6 +274,7 @@ function renderAgents() {
         <div class="agent-badge">${agent.jobs.length} jobs</div>
         <div class="agent-arrow">▼</div>
       </div>
+      ${linksHtml}
       <div class="agent-body">
         <div class="job-list">${jobsHtml}</div>
       </div>`;
