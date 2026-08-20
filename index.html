@@ -202,6 +202,13 @@
   .view-timeline { color: var(--accent-light); font-weight: 600; cursor: pointer; }
   .view-timeline:hover { text-decoration: underline; }
 
+  .crm-links { display: flex; gap: 6px; padding: 0 16px 8px; flex-wrap: wrap; }
+  .crm-link { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; text-decoration: none; transition: all 0.15s; }
+  .crm-link-ob { background: rgba(124,92,252,0.12); color: var(--accent-light); border: 1px solid rgba(124,92,252,0.25); }
+  .crm-link-ob:hover { background: rgba(124,92,252,0.22); }
+  .crm-link-acct { background: rgba(6,182,212,0.12); color: var(--cyan); border: 1px solid rgba(6,182,212,0.25); }
+  .crm-link-acct:hover { background: rgba(6,182,212,0.22); }
+
   /* Table View */
   .table-view { display: none; }
   .table-view.active { display: block; }
@@ -380,6 +387,7 @@
           <th onclick="sortTable('goLive')">Go-Live ↕</th>
           <th>Training</th>
           <th>Owner</th>
+          <th>CRM</th>
           <th>Timeline</th>
         </tr>
       </thead>
@@ -690,6 +698,10 @@ function renderCustomers() {
         <div class="card-stat"><div class="stat-val">${c.training || '—'}</div><div class="stat-lbl">Training</div></div>
         <div class="card-stat"><div class="stat-val">${c.ownerName || '—'}</div><div class="stat-lbl">Owner</div></div>
       </div>
+      <div class="crm-links">
+        <a href="https://crm.zoho.com/crm/fitmanager/Onboarding_Module/${c.id}" target="_blank" class="crm-link crm-link-ob" onclick="event.stopPropagation()">📋 Onboarding</a>
+        ${c.accountId ? `<a href="https://crm.zoho.com/crm/fitmanager/Accounts/${c.accountId}" target="_blank" class="crm-link crm-link-acct" onclick="event.stopPropagation()">🏢 Account</a>` : ''}
+      </div>
       <div class="card-footer">
         <span>Last activity: ${fmtDate(c.lastActivity)}</span>
         <span class="view-timeline">View Timeline →</span>
@@ -712,6 +724,10 @@ function renderCustomers() {
       <td>${fmtDate(c.goLive)}</td>
       <td>${c.training || '—'}</td>
       <td>${c.ownerName || '—'}</td>
+      <td>
+        <a href="https://crm.zoho.com/crm/fitmanager/Onboarding_Module/${c.id}" target="_blank" style="color:var(--accent-light);font-size:11px" title="Open in Zoho CRM">📋</a>
+        ${c.accountId ? ` <a href="https://crm.zoho.com/crm/fitmanager/Accounts/${c.accountId}" target="_blank" style="color:var(--cyan);font-size:11px" title="Open Account in CRM">🏢</a>` : ''}
+      </td>
       <td style="color:var(--accent-light);cursor:pointer">View →</td>
     </tr>
   `).join('');
