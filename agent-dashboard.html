@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FitManager AI Agent Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif; background: #0a0a0f; color: #e0e0e0; min-height: 100vh; }
+  
+  .header { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 24px 32px; border-bottom: 1px solid #2a2a4a; }
+  .header h1 { font-size: 24px; font-weight: 600; color: #fff; }
+  .header h1 span { color: #4ba7ed; }
+  .header .subtitle { color: #888; font-size: 13px; margin-top: 4px; }
+  .header .stats { display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap; }
+  .header .stat { background: rgba(75,167,237,0.1); border: 1px solid rgba(75,167,237,0.2); border-radius: 8px; padding: 8px 16px; }
+  .header .stat .num { font-size: 20px; font-weight: 700; color: #4ba7ed; }
+  .header .stat .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .toolbar { display: flex; align-items: center; gap: 12px; padding: 16px 32px; flex-wrap: wrap; }
+  .toolbar input { flex: 1; min-width: 200px; max-width: 400px; background: #12121e; border: 1px solid #1e1e35; border-radius: 8px; padding: 10px 16px; color: #ddd; font-size: 14px; outline: none; }
+  .toolbar input:focus { border-color: #4ba7ed; }
+  .toolbar input::placeholder { color: #444; }
+  .btn { padding: 8px 16px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-refresh { background: rgba(75,167,237,0.15); color: #4ba7ed; border: 1px solid rgba(75,167,237,0.3); }
+  .btn-refresh:hover { background: rgba(75,167,237,0.25); }
+  .btn-collapse { background: rgba(255,255,255,0.06); color: #aaa; border: 1px solid rgba(255,255,255,0.1); }
+  .btn-collapse:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; padding: 0 32px 32px; }
+
+  .agent-card { background: #12121e; border: 1px solid #1e1e35; border-radius: 12px; overflow: hidden; transition: all 0.2s ease; }
+  .agent-card:hover { border-color: #2e2e55; box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+  .agent-card.open .agent-body { max-height: 4000px; }
+
+  .agent-header { padding: 20px; cursor: pointer; display: flex; align-items: center; gap: 14px; user-select: none; }
+  .agent-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .agent-info { flex: 1; min-width: 0; }
+  .agent-name { font-size: 16px; font-weight: 600; color: #fff; }
+  .agent-channel { font-size: 12px; color: #666; margin-top: 2px; }
+  .agent-badge { background: rgba(255,255,255,0.08); border-radius: 20px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #aaa; white-space: nowrap; }
+  .agent-arrow { color: #555; font-size: 18px; transition: transform 0.2s; }
+  .agent-card.open .agent-arrow { transform: rotate(180deg); }
+
+  .agent-body { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+  .job-list { padding: 0 20px 20px; }
+
+  .job-item { background: #0e0e18; border: 1px solid #1a1a30; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; transition: all 0.15s; }
+  .job-item:hover { border-color: #2a2a50; background: #111122; }
+  .job-item:last-child { margin-bottom: 0; }
+
+  .job-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .job-name-area { flex: 1; min-width: 0; cursor: pointer; }
+  .job-name { font-size: 13px; font-weight: 500; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .job-status { display: flex; align-items: center; gap: 6px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.ok { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+  .status-dot.running { background: #3b82f6; box-shadow: 0 0 8px rgba(59,130,246,0.5); animation: pulse 1.5s ease infinite; }
+  .status-dot.paused { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.3); }
+  .status-dot.error { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+  .status-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.3px; }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .job-meta { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .job-tag { font-size: 11px; color: #666; background: rgba(255,255,255,0.04); border-radius: 4px; padding: 2px 8px; }
+
+  .job-actions { display: flex; gap: 6px; margin-left: auto; }
+  .btn-action { padding: 5px 10px; border-radius: 5px; border: none; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 4px; }
+  .btn-pause { background: rgba(245,158,11,0.15); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+  .btn-pause:hover { background: rgba(245,158,11,0.25); }
+  .btn-resume { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+  .btn-resume:hover { background: rgba(34,197,94,0.25); }
+  .btn-trigger { background: rgba(75,167,237,0.15); color: #4ba7ed; border: 1px solid rgba(75,167,237,0.3); }
+  .btn-trigger:hover { background: rgba(75,167,237,0.25); }
+  .btn-action:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-action .spinner { width: 10px; height: 10px; border: 2px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .job-details { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+  .job-item.open .job-details { max-height: 500px; }
+  .job-detail-content { margin-top: 12px; padding-top: 12px; border-top: 1px solid #1a1a30; font-size: 12px; color: #999; line-height: 1.7; }
+  .job-detail-content .field { margin-bottom: 4px; }
+  .job-detail-content .field-label { color: #555; font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; display: inline-block; min-width: 90px; }
+  .job-detail-content .field-value { color: #bbb; }
+  .job-detail-content .prompt-preview { background: #0a0a14; border-radius: 6px; padding: 10px 12px; margin-top: 8px; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 11px; color: #777; white-space: pre-wrap; max-height: 120px; overflow-y: auto; border: 1px solid #1a1a30; }
+  .tools-list { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+  .tool-chip { font-size: 10px; background: rgba(75,167,237,0.1); color: #4ba7ed; border-radius: 3px; padding: 1px 6px; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 1000; transform: translateY(100px); opacity: 0; transition: all 0.3s ease; pointer-events: none; }
+  .toast.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .toast.success { background: #065f46; color: #a7f3d0; border: 1px solid #10b981; }
+  .toast.error { background: #7f1d1d; color: #fca5a5; border: 1px solid #ef4444; }
+  .toast.info { background: #1e3a5f; color: #93c5fd; border: 1px solid #3b82f6; }
+
+  .last-refresh { font-size: 11px; color: #555; padding: 0 32px 8px; }
+
+  /* Agent-specific colors */
+  .agent-bsm .agent-icon { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+  .agent-onboarding .agent-icon { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  .agent-invoices .agent-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .agent-tax .agent-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
+  .agent-shipping .agent-icon { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🤖 FitManager <span>AI Agent Dashboard</span></h1>
+  <div class="subtitle">Agent status, scheduled jobs, and automation overview</div>
+  <div class="stats">
+    <div class="stat"><div class="num">5</div><div class="label">Agents</div></div>
+    <div class="stat"><div class="num" id="total-jobs">16</div><div class="label">Total Jobs</div></div>
+    <div class="stat"><div class="num" id="active-jobs">15</div><div class="label">Active</div></div>
+    <div class="stat"><div class="num" id="paused-jobs">1</div><div class="label">Paused</div></div>
+  </div>
+</div>
+
+<div class="toolbar">
+  <input type="text" id="search" placeholder="🔍  Search jobs by name, schedule, or skill..." oninput="filterJobs(this.value)">
+  <button class="btn btn-refresh" onclick="refreshAllJobs()">↻ Refresh Status</button>
+  <button class="btn btn-collapse" onclick="toggleAllCards()">Toggle All</button>
+</div>
+<div class="last-refresh" id="last-refresh"></div>
+
+<div class="grid" id="agent-grid">
+  <!-- Populated by JS -->
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = window.location.origin;
+
+// ─── Agent & Job Definitions ───
+const AGENTS = [
+  {
+    id: 'bsm', name: 'zulu_BSM', icon: '📊',
+    desc: 'Business Success Manager',
+    channel: '#customer-success',
+    cssClass: 'agent-bsm',
+    jobs: [
+      { id: 'b9529dc1e01d', name: 'Daily Operational Summary', icon: '📋', schedule: 'Daily 7:00 AM CT', cron: '0 7 * * *', skill: 'customer-success-manager', tools: ['terminal', 'file'], deliver: 'Slack #customer-success', desc: 'Open tickets, aging, fallout, renewals, support chat review, expansion opportunities, actions completed since previous summary.' },
+      { id: 'c2851d0e0861', name: 'Weekly Customer Success Report', icon: '📈', schedule: 'Monday 7:00 AM CT', cron: '0 7 * * 1', skill: 'customer-success-manager', tools: ['terminal', 'file'], deliver: 'Slack #customer-success', desc: 'Weekly CS metrics: proactive touches, coverage %, open tickets, fallout alerts, renewal risks, KB drafts, expansion opportunities.' },
+      { id: '21fd7d4000f7', name: 'Monthly Outreach Kickoff', icon: '📬', schedule: '1st of Month 8:00 AM CT', cron: '0 8 1 * *', skill: 'customer-success-manager', tools: ['terminal', 'file'], deliver: 'Slack #customer-success', desc: 'Generate active customer list, P1-P4 categorization, monthly outreach queue, coverage targets.' },
+      { id: 'b792b542cdc3', name: 'SalesIQ Chat Monitor', icon: '💬', schedule: 'Every 15 min (M-F 8-5)', cron: '*/15 8-17 * * 1-5', skill: 'customer-success-manager', tools: ['terminal', 'file'], deliver: 'Slack #customer-success', desc: 'Monitor Shop Support Brand conversations, review unresolved/frustrated chats, prepare follow-up responses for approval.' },
+      { id: 'cc580dd7f5af', name: 'Monthly Coverage Report', icon: '📊', schedule: 'Last Biz Day 7:00 AM CT', cron: '0 7 28-31 * *', skill: 'customer-success-manager', tools: ['terminal', 'file'], deliver: 'Slack #customer-success', desc: 'Monthly coverage report: active vs touched accounts, coverage %, untouched accounts, growth opportunities, operational recommendations.' },
+    ]
+  },
+  {
+    id: 'onboarding', name: 'zulu_onboarding_agent', icon: '🚀',
+    desc: 'Onboarding & Welcome Kits',
+    channel: '#onboarding',
+    cssClass: 'agent-onboarding',
+    jobs: [
+      { id: 'f4bf96719320', name: 'New Closed Won Monitor', icon: '🔔', schedule: 'Hourly (M-F 8-8 PM)', cron: '0 8-20 * * 1-5', script: 'onboarding-monitor.py', tools: [], deliver: 'Local', desc: 'Watches for new Closed Won deals in Zoho CRM, creates onboarding records, posts announcements to #onboarding channel.', noAgent: true },
+      { id: 'edac224876a8', name: 'Welcome Kit (Morning)', icon: '📦', schedule: 'Daily 7:20 AM CT (M-F)', cron: '20 13 * * 1-5', skill: 'welcome-kit-automation', tools: [], deliver: 'Origin', desc: 'Qualifies Closed Won deals, creates welcome kit assets from HTML templates via Chrome CDP, posts to Slack for approval, sends test → customer emails.' },
+      { id: '45fa171ca70d', name: 'Welcome Kit (Afternoon)', icon: '📦', schedule: 'Daily 2:20 PM CT (M-F)', cron: '20 20 * * 1-5', skill: 'welcome-kit-automation', tools: [], deliver: 'Origin', desc: 'Same pipeline as morning run. Catches deals that closed after the morning check and processes approvals.' },
+      { id: 'fabd14015431', name: 'Zoho→GHL Daily Sync', icon: '🔄', schedule: 'Daily 6:00 AM CT', cron: '0 6 * * *', script: 'zoho-ghl-sync.py', tools: [], deliver: 'Slack #onboarding-sync', desc: 'Syncs Closed Won deals from Zoho CRM to GoHighLevel, creates B2B contacts, enrolls in training.', noAgent: true },
+      { id: 'fc0e0e06207f', name: 'Zoho→GHL Sync (2pm)', icon: '🔄', schedule: 'Daily 2:00 PM CT', cron: '0 14 * * *', script: 'zoho-ghl-sync.py', tools: [], deliver: 'Slack #onboarding-sync', desc: 'Afternoon catch-up sync for deals that closed between morning sync and 2 PM.', noAgent: true },
+      { id: 'zoho_renewals_daily', name: 'Weekly Zoho Renewals Check', icon: '📅', schedule: 'Monday 9:00 AM CT', cron: '0 9 * * 1', tools: [], deliver: 'Origin', desc: 'Check Zoho CRM for account renewals coming up. Reports approaching renewal dates with account details.' },
+    ]
+  },
+  {
+    id: 'invoices', name: 'zulu_past_due_invoices', icon: '💰',
+    desc: 'Invoice Collections',
+    channel: '#past-due-invoices',
+    cssClass: 'agent-invoices',
+    jobs: [
+      { id: 'd9f90e2ca271', name: 'Daily Past-Due Invoice Check', icon: '🔔', schedule: 'Mon-Fri 10:00 AM CT', cron: '0 10 * * 1-5', skills: ['past-due-invoice-email', 'stripe-direct-api'], tools: ['terminal', 'file', 'stripe-direct-api'], deliver: 'Slack #past-due-invoices', desc: 'Queries Stripe for open past-due invoices, posts each to Slack for Daniel\'s approval, sends collection emails via himalaya on ✅ approval.' },
+    ]
+  },
+  {
+    id: 'tax', name: 'zulu_sale_tax', icon: '🧾',
+    desc: 'Sales Tax Compliance',
+    channel: 'Sales Tax',
+    cssClass: 'agent-tax',
+    jobs: [
+      { id: '5650279334d0', name: 'Monthly Sales Tax Reconciliation', icon: '🧾', schedule: '1st of Month 9:00 AM CT', cron: '0 9 1 * *', skills: ['sales-tax-reconciliation', 'stripe-direct-api', 'zoho-billing'], tools: ['terminal', 'file'], deliver: 'Origin', desc: 'Dual-source reconciliation: Stripe + Zoho Billing. Config audit, tax calculation, net tax collected, migration monitoring, monthly compliance report. TX/GA/CA nexus.' },
+    ]
+  },
+  {
+    id: 'shipping', name: 'zulu_shipping_agent', icon: '📦',
+    desc: 'Hardware Shipping',
+    channel: '#hardware-shipping',
+    cssClass: 'agent-shopping',
+    jobs: [
+      { id: 'c4a9ee6ef6f0', name: 'Daily UPS Shipment Tracker', icon: '🚚', schedule: 'Daily 7:00 AM CT', cron: '0 7 * * *', tools: ['browser', 'terminal', 'file', 'search'], deliver: 'Slack #shipment-tracker + #hardware-shipping', desc: 'Tracks UPS shipments for all in-transit orders. Checks Zoho Inventory for tracking numbers, posts status updates to both channels.' },
+      { id: 'a0ebc3f00396', name: 'Scales FedEx Tracker', icon: '📐', schedule: 'Daily 1:00 PM CT', cron: '0 13 * * *', tools: ['browser', 'terminal', 'file'], deliver: 'Slack #shipment-tracker', desc: 'Tracks FedEx shipment from scale manufacturer (Chino, CA). Reports transit status and estimated delivery.', tag: 'FedEx 875280989399' },
+      { id: '4326d0abf65c', name: 'Sales Order Check', icon: '📋', schedule: 'M-F 6:00 AM + 3:00 PM CT', cron: '0 6,15 * * 1-5', skill: 'shipping-agent', tools: ['terminal', 'file'], deliver: 'Slack #hardware-shipping', desc: 'Checks Zoho Inventory for Draft Sales Orders, verifies stock, auto-advances Draft → Confirmed → Packed, generates Pirate Ship CSV, alerts on stock shortages.' },
+    ]
+  },
+];
+
+// Fix CSS class typo
+AGENTS.find(a => a.id === 'shipping').cssClass = 'agent-shipping';
+
+// ─── State ───
+let jobStates = {}; // { job_id: { enabled, state, last_status, last_run } }
+
+// ─── Render ───
+function renderAgents() {
+  const grid = document.getElementById('agent-grid');
+  grid.innerHTML = '';
+
+  AGENTS.forEach(agent => {
+    const card = document.createElement('div');
+    card.className = `agent-card ${agent.cssClass} open`;
+    card.dataset.agent = agent.id;
+
+    const jobsHtml = agent.jobs.map(job => {
+      const state = jobStates[job.id] || {};
+      const enabled = state.enabled !== undefined ? state.enabled : true;
+      const statusClass = !enabled ? 'paused' : (state.state === 'running' ? 'running' : 'ok');
+      const statusLabel = !enabled ? 'Paused' : (state.state === 'running' ? 'Running' : 'Active');
+      const lastRun = state.last_run || 'Loading...';
+      const lastStatus = state.last_status || '';
+
+      return `
+        <div class="job-item" data-job-id="${job.id}" data-name="${job.name}" data-schedule="${job.schedule}">
+          <div class="job-top">
+            <div class="job-name-area" onclick="toggleJob(this.closest('.job-item'))">
+              <div class="job-name">${job.icon} ${job.name}</div>
+            </div>
+            <div class="job-status">
+              <div class="status-dot ${statusClass}"></div>
+              <div class="status-label">${statusLabel}</div>
+            </div>
+            <div class="job-actions">
+              ${enabled
+                ? `<button class="btn-action btn-pause" onclick="pauseJob('${job.id}', this)" title="Pause">⏸ Pause</button>`
+                : `<button class="btn-action btn-resume" onclick="resumeJob('${job.id}', this)" title="Resume">▶ Resume</button>`
+              }
+              <button class="btn-action btn-trigger" onclick="triggerJob('${job.id}', this)" title="Run now">⚡ Run</button>
+            </div>
+          </div>
+          <div class="job-meta">
+            <div class="job-tag">⏰ ${job.schedule}</div>
+            ${job.skill ? `<div class="job-tag">🔧 ${job.skill}</div>` : ''}
+            ${job.noAgent ? `<div class="job-tag">🤖 Script-only</div>` : ''}
+            ${job.tag ? `<div class="job-tag">📦 ${job.tag}</div>` : ''}
+          </div>
+          <div class="job-details">
+            <div class="job-detail-content">
+              <div class="field"><span class="field-label">Job ID:</span> <span class="field-value">${job.id}</span></div>
+              <div class="field"><span class="field-label">Schedule:</span> <span class="field-value">${job.cron}</span></div>
+              <div class="field"><span class="field-label">Last Run:</span> <span class="field-value">${lastRun} ${lastStatus === 'ok' ? '✓' : lastStatus === 'error' ? '✗' : ''}</span></div>
+              <div class="field"><span class="field-label">Delivers To:</span> <span class="field-value">${job.deliver}</span></div>
+              <div class="prompt-preview">${job.desc}</div>
+              ${job.tools && job.tools.length ? `<div class="tools-list">${job.tools.map(t => `<span class="tool-chip">${t}</span>`).join('')}</div>` : ''}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="agent-header" onclick="toggleCard(this)">
+        <div class="agent-icon">${agent.icon}</div>
+        <div class="agent-info">
+          <div class="agent-name">${agent.name}</div>
+          <div class="agent-channel">${agent.desc} · ${agent.channel}</div>
+        </div>
+        <div class="agent-badge">${agent.jobs.length} jobs</div>
+        <div class="agent-arrow">▼</div>
+      </div>
+      <div class="agent-body">
+        <div class="job-list">${jobsHtml}</div>
+      </div>`;
+
+    grid.appendChild(card);
+  });
+
+  updateStats();
+}
+
+function updateStats() {
+  const all = Object.values(jobStates);
+  const total = all.length || 16;
+  const active = all.filter(j => j.enabled).length || 15;
+  const paused = total - active;
+  document.getElementById('total-jobs').textContent = total;
+  document.getElementById('active-jobs').textContent = active;
+  document.getElementById('paused-jobs').textContent = paused;
+}
+
+// ─── Interactions ───
+function toggleCard(header) {
+  header.closest('.agent-card').classList.toggle('open');
+}
+
+function toggleJob(item) {
+  item.classList.toggle('open');
+}
+
+function toggleAllCards() {
+  const cards = document.querySelectorAll('.agent-card');
+  const anyOpen = [...cards].some(c => c.classList.contains('open'));
+  cards.forEach(c => c.classList.toggle('open', !anyOpen));
+}
+
+function filterJobs(query) {
+  query = query.toLowerCase();
+  document.querySelectorAll('.agent-card').forEach(card => {
+    let hasMatch = false;
+    card.querySelectorAll('.job-item').forEach(job => {
+      const name = (job.dataset.name || '').toLowerCase();
+      const schedule = (job.dataset.schedule || '').toLowerCase();
+      const text = job.textContent.toLowerCase();
+      const match = !query || name.includes(query) || schedule.includes(query) || text.includes(query);
+      job.style.display = match ? '' : 'none';
+      if (match) hasMatch = true;
+    });
+    card.style.display = hasMatch ? '' : 'none';
+    if (hasMatch && query) card.classList.add('open');
+  });
+}
+
+// ─── Toast ───
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = `toast ${type} show`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ─── API Actions ───
+async function apiAction(action, jobId, btn) {
+  btn.disabled = true;
+  const origHtml = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/jobs/${jobId}/${action}`);
+    const data = await resp.json();
+
+    if (data.success) {
+      showToast(`${action === 'pause' ? '⏸ Paused' : action === 'resume' ? '▶ Resumed' : '⚡ Triggered'}: ${jobId}`, 'success');
+      // Update local state
+      if (action === 'pause') {
+        jobStates[jobId] = { ...jobStates[jobId], enabled: false, state: 'paused' };
+      } else if (action === 'resume') {
+        jobStates[jobId] = { ...jobStates[jobId], enabled: true, state: 'scheduled' };
+      } else if (action === 'run') {
+        jobStates[jobId] = { ...jobStates[jobId], state: 'triggered' };
+      }
+      renderAgents();
+    } else {
+      showToast(`Error: ${data.message}`, 'error');
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  } catch (err) {
+    showToast(`Network error: ${err.message}`, 'error');
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+}
+
+function pauseJob(jobId, btn) { apiAction('pause', jobId, btn); }
+function resumeJob(jobId, btn) { apiAction('resume', jobId, btn); }
+function triggerJob(jobId, btn) { apiAction('run', jobId, btn); }
+
+// ─── Fetch Live Status ───
+async function refreshAllJobs() {
+  showToast('Refreshing job statuses...', 'info');
+  try {
+    const resp = await fetch(`${API_BASE}/api/jobs`);
+    const data = await resp.json();
+
+    if (data.jobs) {
+      data.jobs.forEach(j => {
+        jobStates[j.job_id] = {
+          enabled: j.enabled,
+          state: j.state,
+          last_status: j.last_status || '',
+          last_run: j.last_run || '',
+        };
+      });
+      renderAgents();
+      document.getElementById('last-refresh').textContent = `Last refreshed: ${new Date().toLocaleTimeString()}`;
+      showToast(`Refreshed ${data.jobs.length} jobs`, 'success');
+    }
+  } catch (err) {
+    showToast(`Refresh failed: ${err.message}`, 'error');
+  }
+}
+
+// ─── Init ───
+renderAgents();
+refreshAllJobs();
+</script>
+
+</body>
+</html>
